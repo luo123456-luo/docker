@@ -46,3 +46,4 @@ jupyter/base-notebook
 apache/spark
 helm
 kubectl
+openjdk:8-jdk
