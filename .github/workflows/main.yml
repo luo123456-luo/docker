@@ -16,7 +16,7 @@ jobs:
 
       - name: Login to Alibaba Cloud Container Registry
         run: |
-          docker login --username=${{ secrets.ALIBABA_CLOUD_USERNAME }} --password=${{ secrets.ALIBABA_CLOUD_PASSWORD }} registry.cn-hangzhou.aliyuncs.com
+          echo "${{ secrets.ALIYUN_REGISTRY_PASSWORD }}" | docker login --username="${{ secrets.ALIYUN_REGISTRY_USER }}" --password-stdin crpi-itjqcsq4n73rmt0z.cn-hangzhou.personal.cr.aliyuncs.com
 
       - name: Read images.txt and pull images
         run: |
@@ -29,7 +29,7 @@ jobs:
             image_tag=$(echo "$image" | awk -F: '{print $2}')
 
             # Retag the image for Alibaba Cloud Container Registry
-            new_image_name="registry.cn-hangzhou.aliyuncs.com/your-namespace/$image_name:$image_tag"
+            new_image_name="crpi-itjqcsq4n73rmt0z.cn-hangzhou.personal.cr.aliyuncs.com/docker-compor/$image_name:$image_tag"
             echo "Retagging $image to $new_image_name..."
             docker tag "$image" "$new_image_name"
 
