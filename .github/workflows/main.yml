@@ -1,4 +1,4 @@
-name: Pull Docker Images
+name: Pull and Push Docker Images to Alibaba Cloud
 
 on:
   push:
@@ -7,16 +7,33 @@ on:
   workflow_dispatch:
 
 jobs:
-  pull-images:
+  pull-and-push-images:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Login to Alibaba Cloud Container Registry
+        run: |
+          docker login --username=${{ secrets.ALIBABA_CLOUD_USERNAME }} --password=${{ secrets.ALIBABA_CLOUD_PASSWORD }} registry.cn-hangzhou.aliyuncs.com
+
       - name: Read images.txt and pull images
         run: |
           while IFS= read -r image; do
             echo "Pulling $image..."
             docker pull "$image"
+
+            # Extract the image name and tag
+            image_name=$(echo "$image" | awk -F/ '{print $NF}' | awk -F: '{print $1}')
+            image_tag=$(echo "$image" | awk -F: '{print $2}')
+
+            # Retag the image for Alibaba Cloud Container Registry
+            new_image_name="registry.cn-hangzhou.aliyuncs.com/your-namespace/$image_name:$image_tag"
+            echo "Retagging $image to $new_image_name..."
+            docker tag "$image" "$new_image_name"
+
+            # Push the image to Alibaba Cloud Container Registry
+            echo "Pushing $new_image_name to Alibaba Cloud Container Registry..."
+            docker push "$new_image_name"
           done < images.txt
