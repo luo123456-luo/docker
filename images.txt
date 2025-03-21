@@ -1,1 +1,2 @@
 twang2218/gitlab-ce-zh
+elasticsearch:8.12.2
