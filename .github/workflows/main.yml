@@ -1,27 +1,69 @@
-- name: Read images.txt and pull images
-  run: |
-    while IFS= read -r image || [[ -n "$image" ]]; do
-      echo "Pulling $image..."
-      docker pull "$image"
+name: Pull and Push Docker Images to Alibaba Cloud
 
-      # Extract the image name and tag
-      image_name=$(echo "$image" | awk -F/ '{print $NF}' | awk -F: '{print $1}')
-      image_tag=$(echo "$image" | awk -F: '{print $2}')
-      
-      # If no tag is found, set it to 'latest'
-      if [[ -z "$image_tag" ]]; then
-        image_tag="latest"
-      fi
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
-      # Output image_tag
-      echo "Extracted image tag: $image_tag"
+jobs:
+  pull-and-push-images:
+    runs-on: ubuntu-latest
 
-      # Retag the image for Alibaba Cloud Container Registry
-      new_image_name="crpi-itjqcsq4n73rmt0z.cn-hangzhou.personal.cr.aliyuncs.com/docker-compor/$image_name:$image_tag"
-      echo "Retagging $image to $new_image_name..."
-      docker tag "$image" "$new_image_name"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      # Push the image to Alibaba Cloud Container Registry
-      echo "Pushing $new_image_name to Alibaba Cloud Container Registry..."
-      docker push "$new_image_name"
-    done < images.txt
+      - name: Login to Alibaba Cloud Container Registry
+        run: |
+          echo "${{ secrets.ALIYUN_REGISTRY_PASSWORD }}" | docker login --username="${{ secrets.ALIYUN_REGISTRY_USER }}" --password-stdin crpi-itjqcsq4n73rmt0z.cn-hangzhou.personal.cr.aliyuncs.com
+
+      - name: Read images.txt and pull images
+        run: |
+          set -e  # 遇到错误时立即退出（可选）
+
+          while IFS= read -r image || [[ -n "$image" ]]; do
+            # 去除 Windows 换行符并去掉前后空格
+            image=$(echo "$image" | tr -d '\r' | xargs)
+
+            # 跳过空行
+            if [[ -z "$image" ]]; then
+              echo "Skipping empty line..."
+              continue
+            fi
+
+            echo "Pulling $image..."
+            if ! docker pull "$image"; then
+              echo "❌ Failed to pull $image"
+              continue
+            fi
+
+            # 解析镜像名称和标签
+            image_name=$(echo "$image" | awk -F/ '{print $NF}' | awk -F: '{print $1}')
+            image_tag=$(echo "$image" | awk -F: '{print $2}')
+
+            # 如果没有 tag，默认使用 latest
+            if [[ -z "$image_tag" ]]; then
+              image_tag="latest"
+            fi
+
+            echo "Extracted image tag: $image_tag"
+
+            # 重新标记镜像
+            new_image_name="crpi-itjqcsq4n73rmt0z.cn-hangzhou.personal.cr.aliyuncs.com/docker-compor/$image_name:$image_tag"
+            echo "Retagging $image to $new_image_name..."
+            if ! docker tag "$image" "$new_image_name"; then
+              echo "❌ Failed to tag $image to $new_image_name"
+              continue
+            fi
+
+            # 推送到阿里云容器仓库
+            echo "Pushing $new_image_name to Alibaba Cloud Container Registry..."
+            if ! docker push "$new_image_name"; then
+              echo "❌ Failed to push $new_image_name"
+              continue
+            fi
+
+            echo "✅ Successfully pushed $new_image_name"
+
+          done < images.txt
