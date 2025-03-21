@@ -1,0 +1,22 @@
+name: Pull Docker Images
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  pull-images:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read images.txt and pull images
+        run: |
+          while IFS= read -r image; do
+            echo "Pulling $image..."
+            docker pull "$image"
+          done < images.txt
