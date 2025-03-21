@@ -2,3 +2,4 @@ nginx:latest
 redis:latest
 mysql:5.7
 python3.10
+twang2218/gitlab-ce-zh
