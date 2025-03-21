@@ -38,11 +38,12 @@ jobs:
               continue
             fi
 
-            # 解析镜像名称和标签
-            registry_with_path=$(echo "$image" | awk -F/ '{OFS="/"; $1=""; print substr($0,2)}')  # 去除 registry 地址
+            # 处理官方镜像和非官方镜像的名称
+            # 对于官方镜像需要去掉 `docker.io/` 和 `library/` 部分
+            registry_with_path=$(echo "$image" | sed 's|docker.io/||' | sed 's|library/||')
             image_name=$(echo "$registry_with_path" | awk -F: '{print $1}')  # 获取镜像名称（不含 tag）
             image_tag=$(echo "$registry_with_path" | awk -F: '{print $2}')  # 获取 tag
-            
+
             # 如果没有 tag，默认使用 latest
             if [[ -z "$image_tag" ]]; then
               image_tag="latest"
