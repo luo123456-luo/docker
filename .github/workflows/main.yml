@@ -1,40 +1,27 @@
-name: Pull and Push Docker Images to Alibaba Cloud
+- name: Read images.txt and pull images
+  run: |
+    while IFS= read -r image || [[ -n "$image" ]]; do
+      echo "Pulling $image..."
+      docker pull "$image"
 
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+      # Extract the image name and tag
+      image_name=$(echo "$image" | awk -F/ '{print $NF}' | awk -F: '{print $1}')
+      image_tag=$(echo "$image" | awk -F: '{print $2}')
+      
+      # If no tag is found, set it to 'latest'
+      if [[ -z "$image_tag" ]]; then
+        image_tag="latest"
+      fi
 
-jobs:
-  pull-and-push-images:
-    runs-on: ubuntu-latest
+      # Output image_tag
+      echo "Extracted image tag: $image_tag"
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      # Retag the image for Alibaba Cloud Container Registry
+      new_image_name="crpi-itjqcsq4n73rmt0z.cn-hangzhou.personal.cr.aliyuncs.com/docker-compor/$image_name:$image_tag"
+      echo "Retagging $image to $new_image_name..."
+      docker tag "$image" "$new_image_name"
 
-      - name: Login to Alibaba Cloud Container Registry
-        run: |
-          echo "${{ secrets.ALIYUN_REGISTRY_PASSWORD }}" | docker login --username="${{ secrets.ALIYUN_REGISTRY_USER }}" --password-stdin crpi-itjqcsq4n73rmt0z.cn-hangzhou.personal.cr.aliyuncs.com
-
-      - name: Read images.txt and pull images
-        run: |
-          while IFS= read -r image; do
-            echo "Pulling $image..."
-            docker pull "$image"
-
-            # Extract the image name and tag
-            image_name=$(echo "$image" | awk -F/ '{print $NF}' | awk -F: '{print $1}')
-            image_tag=$(echo "$image" | awk -F: '{print $2}')
-			
-
-            # Retag the image for Alibaba Cloud Container Registry
-            new_image_name="crpi-itjqcsq4n73rmt0z.cn-hangzhou.personal.cr.aliyuncs.com/docker-compor/$image_name:$image_tag"
-            echo "Retagging $image to $new_image_name..."
-            docker tag "$image" "$new_image_name"
-
-            # Push the image to Alibaba Cloud Container Registry
-            echo "Pushing $new_image_name to Alibaba Cloud Container Registry..."
-            docker push "$new_image_name"
-          done < images.txt
+      # Push the image to Alibaba Cloud Container Registry
+      echo "Pushing $new_image_name to Alibaba Cloud Container Registry..."
+      docker push "$new_image_name"
+    done < images.txt
