@@ -28,8 +28,8 @@ jobs:
             image_name=$(echo "$image" | awk -F/ '{print $NF}' | awk -F: '{print $1}')
             image_tag=$(echo "$image" | awk -F: '{print $2}')
 			
-			#out iamge_tag
-			echo "out iamge_tag : $image_tag"
+	    #out iamge_tag
+	    echo "out image_tag : $image_tag"
 
             # Retag the image for Alibaba Cloud Container Registry
             new_image_name="crpi-itjqcsq4n73rmt0z.cn-hangzhou.personal.cr.aliyuncs.com/docker-compor/$image_name:$image_tag"
