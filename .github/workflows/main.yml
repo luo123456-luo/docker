@@ -10,16 +10,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Login to Tencent Cloud TCR
         run: |
           set -e
+          echo "🔐 Login Tencent Cloud TCR"
           echo "${{ secrets.ALIYUN_REGISTRY_PASSWORD }}" | \
             docker login ccr.ccs.tencentyun.com \
               --username "${{ secrets.ALIYUN_REGISTRY_USER }}" \
               --password-stdin
+          echo "✅ Login success"
 
       - name: Pull / Tag / Push images (parallel + retry)
         run: |
@@ -27,10 +29,12 @@ jobs:
 
           MAX_RETRY=3
           PARALLEL_JOBS=4
+          NAMESPACE="docker-lxm"
 
-          echo "🚀 Max retry      : $MAX_RETRY"
-          echo "🚀 Parallel jobs : $PARALLEL_JOBS"
-          echo "-----------------------------------"
+          echo "⚙️  Max retry      : $MAX_RETRY"
+          echo "⚙️  Parallel jobs : $PARALLEL_JOBS"
+          echo "⚙️  Namespace     : $NAMESPACE"
+          echo "----------------------------------------"
 
           process_image() {
             local raw_image="$1"
@@ -38,54 +42,78 @@ jobs:
             image="$(echo "$raw_image" | tr -d '\r' | xargs)"
             [[ -z "$image" ]] && return 0
 
+            echo ""
             echo "📦 Processing: $image"
 
-            # normalize
+            # ---------- normalize ----------
             normalized="${image#docker.io/}"
             normalized="${normalized#library/}"
 
+            # ---------- split name / tag ----------
             if [[ "$normalized" == *":"* ]]; then
-              image_name="${normalized%:*}"
+              image_path="${normalized%:*}"
               image_tag="${normalized##*:}"
             else
-              image_name="$normalized"
+              image_path="$normalized"
               image_tag="latest"
             fi
 
-            target="ccr.ccs.tencentyun.com/docker-lxm/docker/${image_name}:${image_tag}"
+            if [[ -z "$image_path" || -z "$image_tag" ]]; then
+              echo "❌ Invalid image parsed"
+              return 1
+            fi
 
-            echo "🎯 Target: $target"
+            # ---------- flatten repo ----------
+            repo_name="$(echo "$image_path" | tr '/' '_' | tr ':' '_')"
 
-            # pull retry
-            for i in $(seq 1 $MAX_RETRY); do
+            target="ccr.ccs.tencentyun.com/${NAMESPACE}/${repo_name}:${image_tag}"
+
+            echo "🎯 Target image: $target"
+
+            # ---------- pull retry ----------
+            for ((i=1;i<=MAX_RETRY;i++)); do
               echo "⬇️  Pull attempt $i/$MAX_RETRY"
-              docker pull "$image" && break
-              [[ $i -eq $MAX_RETRY ]] && return 1
+              if docker pull "$image"; then
+                break
+              fi
+              [[ $i -eq $MAX_RETRY ]] && {
+                echo "❌ Pull failed after $MAX_RETRY attempts"
+                return 1
+              }
               sleep 3
             done
 
-            # tag
-            docker tag "$image" "$target" || return 1
+            # ---------- tag ----------
+            if ! docker tag "$image" "$target"; then
+              echo "❌ Tag failed"
+              return 1
+            fi
 
-            # push retry
-            for i in $(seq 1 $MAX_RETRY); do
+            # ---------- push retry ----------
+            for ((i=1;i<=MAX_RETRY;i++)); do
               echo "⬆️  Push attempt $i/$MAX_RETRY"
-              docker push "$target" && break
-              [[ $i -eq $MAX_RETRY ]] && return 1
+              if docker push "$target"; then
+                break
+              fi
+              [[ $i -eq $MAX_RETRY ]] && {
+                echo "❌ Push failed after $MAX_RETRY attempts"
+                return 1
+              }
               sleep 3
             done
 
-            echo "✅ DONE: $target"
+            echo "✅ SUCCESS: $target"
           }
 
           export -f process_image
           export MAX_RETRY
+          export NAMESPACE
 
-          # 并行执行
-          grep -v '^\s*$' images.txt | parallel -j $PARALLEL_JOBS process_image
+          # ---------- parallel run ----------
+          grep -v '^\s*$' images.txt | parallel -j "$PARALLEL_JOBS" process_image
 
-      - name: Fail if any image failed
+      - name: Check result
         if: failure()
         run: |
-          echo "❌ Some images failed after retries"
+          echo "❌ Some images failed after all retries"
           exit 1
