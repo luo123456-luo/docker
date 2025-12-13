@@ -7,3 +7,4 @@ etcd:3.6.4-0
 coredns:v1.12.1
 pause:3.10
 storage-provisioner:v5
+hello
