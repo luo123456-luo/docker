@@ -1,1 +1,1 @@
-nacos:1.4.2
+nacos/nacos-server:1.4.2
