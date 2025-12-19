@@ -1,1 +1,1 @@
-openjdk:8-jre-slim
+circleci/openjdk:8u312-buster-node-browsers-legacy
