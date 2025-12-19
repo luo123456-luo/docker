@@ -7,3 +7,4 @@ registry.k8s.io/etcd:3.6.4-0
 registry.k8s.io/coredns/coredns:v1.12.1
 registry.k8s.io/pause:3.10
 gcr.io/k8s-minikube/storage-provisioner:v5
+docker.io/flannel/flannel:v0.25.5
