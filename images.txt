@@ -1,1 +1,1 @@
- amazoncorretto:8-alpine
+jdk8
