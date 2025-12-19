@@ -1,3 +1,1 @@
 redis:5.0
-nginx:1.18
-nacos:1.4.2
