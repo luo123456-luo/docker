@@ -1,1 +1,1 @@
-radial/busyboxplus:curl
+radial/busyboxplus
