@@ -1,1 +1,1 @@
-circleci/openjdk:8u312-buster-node-browsers-legacy
+radial/busyboxplus:curl
