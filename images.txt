@@ -1,2 +1,2 @@
-jenkins:lts-jdk17
+jenkins/jenkins:lts-jdk17
 
