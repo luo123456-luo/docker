@@ -1,2 +1,2 @@
-jenkins/jenkins:lts-jdk17
+openjdk:8-jre
 
