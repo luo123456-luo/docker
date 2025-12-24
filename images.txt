@@ -1,2 +1,1 @@
-openjdk:8-jre
-
+bladex/sentinel-dashboard:1.8.6
