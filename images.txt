@@ -1,1 +1,1 @@
-bladex/sentinel-dashboard:1.8.6
+gitlab/gitlab-ce:latest
